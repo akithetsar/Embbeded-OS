@@ -74,7 +74,6 @@ void Console::handleConsoleInterrupt() {
         char c = *((volatile char*)CONSOLE_RX_DATA);
 
         // Producer pattern for input buffer (interrupt context)
-        // We need to be careful in interrupt context - use try operations
         if (inputEmpty->trywait() == 0) {  // If space is available
             if (inputMutex->trywait() == 0) {  // If we can get mutex
                 inputBuffer[inputRear] = c;
