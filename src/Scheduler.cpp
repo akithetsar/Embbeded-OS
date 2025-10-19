@@ -22,9 +22,24 @@ void Scheduler::put(TCB* tcb) {
 }
 
 TCB* Scheduler::get() {
-    if (head == nullptr && idle_tcb != nullptr) {
-        return idle_tcb;  // Return the idle thread if no other threads are ready
+
+    while (head != nullptr && head->isSuspended()) {
+        TCB* suspended = head;
+        head = head->next;
+        if (head != nullptr) {
+            head->prev = nullptr;
+        } else {
+            tail = nullptr;
+        }
+        suspended->next = suspended->prev = nullptr;
+
     }
+
+    if (head == nullptr && idle_tcb != nullptr) {
+        return idle_tcb;
+    }
+
+    if (head == nullptr) return nullptr;
 
     TCB* tcb = head;
     head = head->next;
@@ -48,3 +63,5 @@ void Scheduler::idle_thread_function(void*) {
 TCB *Scheduler::peek() {
     return head;
 }
+
+

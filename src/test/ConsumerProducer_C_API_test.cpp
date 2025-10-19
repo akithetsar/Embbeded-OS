@@ -19,7 +19,9 @@ static void producerKeyboard(void *arg) {
     int key;
     int i = 0;
     while ((key = getc()) != '+') {
-        data->buffer->put(key);
+        data->buffer->put('[');  // Add marker before
+        data->buffer->put(key);  // Your character
+        data->buffer->put(']');  // Add marker after
         i++;
 
         if (i % (10 * data->id) == 0) {

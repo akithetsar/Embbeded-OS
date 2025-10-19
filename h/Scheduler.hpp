@@ -10,15 +10,12 @@
 
 class Scheduler {
 public:
-    // Add a coroutine to the queue
     static void put(TCB* ccb);
 
-    // Get the next coroutine (FCFS scheduling)
     static TCB* get();
 
     static TCB* peek();
 
-    // Clean up the queue and free memory
     static void cleanup();
     static void idle_thread_function(void*);
     static TCB* idle_tcb;

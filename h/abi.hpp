@@ -4,12 +4,8 @@
 
 #ifndef PROJECT_BASE_ABI_HPP
 #define PROJECT_BASE_ABI_HPP
+
 #include "../lib/hw.h"
-#include "../h/riscv.hpp"
-#include "../lib/console.h"
-
-
-
 
 class ABI {
 public:
@@ -49,10 +45,9 @@ public:
         YIELD,
         UNDEFINED_CODE = -1
 
-
     };
 
-    static uint64 sys_ecall(uint64 call_code, uint64 arg1 = 0, uint64 arg2 = 0, uint64 arg3 = 0, uint64 arg4 = 0);
+    static uint64 sys_ecall(uint64 call_code, uint64 arg1, uint64 arg2, uint64 arg3, uint64 arg4);
 
 private:
     typedef uint64 (*system_call)(uint64, uint64, uint64, uint64);

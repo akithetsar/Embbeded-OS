@@ -41,6 +41,9 @@ public:
     TCB* peek(){
         return head;
     }
+    bool isEmpty() const {
+        return head == nullptr;
+    }
 
     TCB* head = nullptr;
     TCB* tail = nullptr;

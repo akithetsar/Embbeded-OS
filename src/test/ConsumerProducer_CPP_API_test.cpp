@@ -22,7 +22,7 @@ public:
     void run() override {
         int key;
         int i = 0;
-        while ((key = getc()) != 0x1b) {
+        while ((key = getc()) != '+') {
             td->buffer->put(key);
             i++;
         }
@@ -45,6 +45,7 @@ public:
             td->buffer->put(td->id + '0');
             i++;
             Thread::sleep((i + td->id) % 5);
+
         }
 
         td->sem->signal();

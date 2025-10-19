@@ -12,12 +12,9 @@ extern "C" void supervisorTrap();
 class riscv {
 public:
 
-
-
-
     static void popSppSpie();
 
-    static void pushRegs();
+    static int pushRegs();
 
     static void popRegs();
 

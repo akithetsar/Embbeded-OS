@@ -3,10 +3,9 @@
 #ifndef PROJECT_BASE_TCB_HPP
 #define PROJECT_BASE_TCB_HPP
 
-#include "MemoryAllocator.hpp"
 #include "Scheduler.hpp"
 #include "proto_print.hpp"
-class Queue;
+class SleepQueue;
 class TCB {
 public:
     using Body = void (*)(void *);
@@ -17,6 +16,7 @@ public:
     static void sys_thread_dispach();
     static int sys_time_sleep(time_t);
 
+    static int sys_get_thread_id();
 
     static void sleepCountdown();
     void setFinished(bool finished) { TCB::is_finished = finished; }
@@ -54,12 +54,28 @@ private:
     bool is_suspended;
     bool is_asleep;
     uint64 timeSlice;
-    static Queue sleepingQueue;
+    static SleepQueue sleepingQueue;
     time_t sleepTime;
     TCB(Body body, void* arg, void* stack);
     static void contextSwitch(Context *oldContext, Context *runningContext);
     static void threadWrapper();
+
+    static uint64 ID;
+    uint64 id;
 };
-#include "Queue.hpp"
+
+
+class SleepQueue {
+public:
+    TCB* head;
+    TCB* tail;
+
+    SleepQueue() : head(nullptr), tail(nullptr) {}
+
+    void put(TCB* tcb);
+    TCB* peek() { return head; }
+    void remove(TCB* tcb);
+    bool isEmpty() { return head == nullptr; }
+};
 
 #endif // PROJECT_BASE_TCB_HPP

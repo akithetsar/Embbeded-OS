@@ -4,12 +4,14 @@
 #include "../h/TCB.hpp"
 #include "../h/riscv.hpp"
 #include "../h/abi.hpp"
-#include "../h/IOSys.hpp"
+#include "../h/Console.hpp"
+
 TCB *TCB::running = nullptr;
 uint64 TCB::timeSliceCounter = 0;
-Queue TCB::sleepingQueue;
+SleepQueue TCB::sleepingQueue;
 uint64 TCB::clock = 0;
-
+uint64 TCB::ID = 0;
+//Align on 16 bytes: & (~0xFL)
 TCB::TCB(TCB::Body body, void* arg, void* stack)
         : next(nullptr),
           prev(nullptr),
@@ -22,15 +24,16 @@ TCB::TCB(TCB::Body body, void* arg, void* stack)
           is_asleep(false),
           timeSlice(DEFAULT_TIME_SLICE)
 {
-
+    this->id = ++TCB::ID;
 }
+
 
 int TCB::sys_thread_create(thread_t *handle, Body body, void* arg, void* stack) {
     *handle = new TCB(body, arg, stack);
     if(body) Scheduler::put(*handle);
     else TCB::running = *handle;
     if(*handle == nullptr) {
-        return -2; // Failed to create object
+        return -2;
     }
 
     return 0;
@@ -38,13 +41,13 @@ int TCB::sys_thread_create(thread_t *handle, Body body, void* arg, void* stack) 
 
 int TCB::sys_thread_exit() {
     running->setFinished(true);
-    if(mem_free(TCB::running->stack) < 0) return -1; //Couldn't deallocate stack properly
+    if(mem_free(TCB::running->stack) < 0) return -1;
     TCB::yield();
     return 0;
 }
 
 void TCB::sys_thread_dispach() {
-    TCB::yield();
+    TCB::dispatch();
 }
 
 void TCB::yield() {
@@ -65,14 +68,17 @@ void TCB::dispatch() {
     running = Scheduler::get();
 
     TCB::contextSwitch(&old->context, &running->context);
+
 }
 
 
 void TCB::threadWrapper() {
-
-    riscv::popSppSpie();
-
-    running->body(TCB::running->arg);
+    if (running->body == (Body)&Console::outputThreadFunction) {
+        running->body(running->arg);
+    } else {
+        riscv::popSppSpie();
+        running->body(running->arg);
+    }
     sys_thread_exit();
 }
 
@@ -81,41 +87,74 @@ TCB::~TCB() {
 }
 
 int TCB::sys_time_sleep(time_t sleep_time) {
+    if (sleep_time <= 0) return 0;
+
     TCB::running->setSleep(true);
     TCB::running->sleepTime = sleep_time;
     sleepingQueue.put(TCB::running);
-    TCB::sys_thread_dispach();
+    TCB::dispatch();
     return 0;
 }
 
+int TCB::sys_get_thread_id() {
+    uint64 t = TCB::running->id;
+    yield();
+    return t;
+
+}
+
 void TCB::sleepCountdown() {
-    TCB *next = sleepingQueue.peek();
-    while(next){
-        next->sleepTime--;
-        if(next->sleepTime <= 0){
-            next->setSleep(false);
-            TCB* to_wake = next;
+    TCB* current = sleepingQueue.head;
 
-            // Unlink the TCB from the sleepingQueue
-            if (to_wake->prev) {
-                to_wake->prev->next = to_wake->next;
-            } else {
-                sleepingQueue.head = to_wake->next; // if to_wake was the head
-            }
-            if (to_wake->next) {
-                to_wake->next->prev = to_wake->prev;
-            } else {
-                sleepingQueue.tail = to_wake->prev; // if to_wake was the tail
-            }
+    while (current != nullptr) {
+        current->sleepTime--;
 
-            next = to_wake->next; // Move to the next TCB in the list
+        if (current->sleepTime <= 0) {
+            current->setSleep(false);
+            TCB* to_wake = current;
+            current = current->next;
 
-            to_wake->next = to_wake->prev = nullptr; // Clean up links in the woken TCB
-            Scheduler::put(to_wake); // Add the TCB to the ready queue
-        } else{
-            next = next->next;
+            sleepingQueue.remove(to_wake);
+            Scheduler::put(to_wake);
+        } else {
+            current = current->next;
         }
     }
+}
+
+
+void SleepQueue::put(TCB* tcb) {
+    if (tcb == nullptr) return;
+
+    tcb->next = nullptr;
+    tcb->prev = nullptr;
+
+    if (head == nullptr) {
+        head = tail = tcb;
+    } else {
+        tail->next = tcb;
+        tcb->prev = tail;
+        tail = tcb;
+    }
+}
+
+void SleepQueue::remove(TCB* tcb) {
+    if (tcb == nullptr) return;
+
+    if (tcb->prev) {
+        tcb->prev->next = tcb->next;
+    } else {
+        head = tcb->next;
+    }
+
+    if (tcb->next) {
+        tcb->next->prev = tcb->prev;
+    } else {
+        tail = tcb->prev;
+    }
+
+
+    tcb->next = tcb->prev = nullptr;
 }
 
 
