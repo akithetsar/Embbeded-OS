@@ -26,8 +26,7 @@ SysSemaphore::~SysSemaphore() {
         TCB* tcb = dequeue_blocked();
         if (tcb) {
             tcb->setSuspended(false);
-            // Set error code in TCB (you might need to add this field)
-            // tcb->semaphore_error = SEMDEAD;
+
             Scheduler::put(tcb);
         }
     }
