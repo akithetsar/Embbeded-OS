@@ -128,9 +128,7 @@ int SysSemaphore::timedwait(time_t timeout) {
         TCB::dispatch();
 
         // Check if we were woken up by timeout or signal
-        // You might need to add a field to TCB to track this
         if (is_destroyed) return SEMDEAD;
-        // If woken by timeout, trywait would have already handled cleanup
         return 0;  // Successfully acquired
     }
 
